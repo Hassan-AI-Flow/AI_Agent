@@ -1,29 +1,26 @@
-from my_frontend_agent import agent_creator
-from agents import Runner , set_tracing_disabled
-set_tracing_disabled(True)
-
-import chainlit as cl
-
-
-@cl.on_chat_start
-async def start():
-    await cl.Message(content="I am your personal assistant.").send()
-    cl.user_session.set("chat_history", [])
+from agents import Agent, Runner, set_tracing_disabled , function_tool
+from agents.extensions.models.litellm_model import LitellmModel
+import os
+from dotenv import load_dotenv , find_dotenv
+from tavily import TavilyClient
 
 
-@cl.on_message
-async def main(message: cl.Message):
-    history = cl.user_session.get("chat_history") or []
+load_dotenv(find_dotenv())
 
-    history.append({"role": "user", "content": message.content})
 
-    agent = agent_creator()
+@function_tool
+def weather_agent(user_input: str) -> str:
+    """search tool"""
+    tavily_client = TavilyClient(api_key=os.getenv("Tavily_Api_Key"))
+    response = tavily_client.search(query=user_input)
+    return response
 
-    response = await Runner.run(starting_agent=agent , input=history)
+def agent_creator() -> Agent:
+    agent = Agent(
+        name="Assistant",
+        instructions="A helpful assistant that can answer questions and provide information.",
+        model= LitellmModel( api_key=os.getenv("Groq_Api_Key"), model="groq/deepseek-r1-distill-llama-70b", ),
+        tools=[weather_agent],
 
-    history.append({"role": "assistant", "content": response.final_output}) 
-
-    cl.user_session.set("chat_history", history)
-
-    await cl.Message(content=response.final_output).send()
-
+    )
+    return agent
