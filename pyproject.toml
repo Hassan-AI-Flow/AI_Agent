@@ -10,3 +10,4 @@ dependencies = [
     "openai-agents>=0.0.12",
     "tavily-python>=0.7.2",
 ]
+    
